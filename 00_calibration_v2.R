@@ -60,7 +60,7 @@ dyn.load("rsv.so")
 
 # so N is the number of people represented
 # this just has to be large enough
-N <- 1e5
+N <- 1e4
 N
 # knowns
 # adding 1 because these can never be 0
@@ -107,7 +107,7 @@ names_vec <- names(pop_df)
 # ***********************
 # HOUSEHOLD
 # household = 50% x (person < 25) and 50% x (person >= 25)
-oo <- .Fortran("set_ids",
+oo <- .Fortran("set_ids_2grp",
                df = as.matrix(pop_df),
                nrows = as.integer(nrow(pop_df)),
                ncols = as.integer(ncol(pop_df)),
@@ -135,14 +135,14 @@ pop_df[rr, 3] <- NA
 # so the reason there are so many NAs is that there aren't any
 # people young enough to make any more houses
 # hm this doesn't seem to be true
-subset(pop_df, age > 25 & is.na(household_id))
-
-# subset
-pop_df <- subset(pop_df, !is.na(household_id))
+# subset(pop_df, age < 25 & is.na(household_id))
+#
+# # subset
+# pop_df <- subset(pop_df, !is.na(household_id))
 pop_df
 
 # check the size distribution
-x1 <- pop_df[, .N, by = household_id]
+x1 <- subset(pop_df, !is.na(household_id))[, .N, by = household_id]
 x1 <- table(x1$N)
 
 x0 <- table(household_sizes)
@@ -154,18 +154,16 @@ plot_dists(x0, x1)
 # SCHOOL
 # school = 80% (person < 20) and 20% (person > = 20)
 # DOESN'T SEEM TO BE WORKING YET .... THERE SHOULD BE LIKE 10 schools
-oo <- .Fortran("set_ids",
+pop_df <- subset(pop_df, !is.na(household_id))
+oo <- .Fortran("set_ids_1grp",
                df = as.matrix(pop_df),
                nrows = as.integer(nrow(pop_df)),
                ncols = as.integer(ncol(pop_df)),
                age_col = as.integer(2),
                vec = as.integer(school_sizes),
                zero_col = as.integer(5),
-               p1 = 0.9,
-               p2 = 0.2,
                age0 = 0,
-               age1 = 20,
-               age2 = 125)
+               age1 = 20)
 
 pop_df <- as.data.table(oo$df)
 names(pop_df) <- names_vec
@@ -176,7 +174,7 @@ rr
 pop_df[rr, 5] <- NA
 
 # check the size distribution
-x1 <- pop_df[, .N, by = school_id]
+x1 <-  subset(pop_df, !is.na(school_id))[, .N, by = school_id]
 x1 <- table(x1$N)
 
 x0 <- table(school_sizes)
@@ -186,18 +184,15 @@ plot_dists(x0, x1)
 # ***********************
 # WORK
 # work = 100% (person > 20)
-oo <- .Fortran("set_ids",
+oo <- .Fortran("set_ids_1grp",
                df = as.matrix(pop_df),
                nrows = as.integer(nrow(pop_df)),
                ncols = as.integer(ncol(pop_df)),
                age_col = as.integer(2),
                vec = as.integer(work_sizes),
                zero_col = as.integer(4),
-               p1 = 0.1,
-               p2 = 0.9,
-               age0 = 0,
-               age1 = 20,
-               age2 = 125)
+               age0 = 21,
+               age1 = 125)
 
 pop_df <- as.data.table(oo$df)
 names(pop_df) <- names_vec
